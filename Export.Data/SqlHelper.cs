@@ -41,29 +41,39 @@ namespace Export.Data
         private IDbTransaction dbTransaction;
 
         /// <summary>
+        /// sql类型
+        /// </summary>
+        public SqlType SqlType { get; set; } = SqlType.MSSQL;
+
+        /// <summary>
         /// 初始化连接
         /// </summary>
-        public SqlHelper(SqlType type = SqlType.MSSQL)
+        public SqlHelper()
         {
-            InternalExecute(() =>
+
+        }
+
+        /// <summary>
+        /// 打开数据库连接
+        /// </summary>
+        public void Open()
+        {
+            switch (SqlType)
             {
-                switch (type)
-                {
-                    case SqlType.MSSQL:
-                        dbConnection = new SqlConnection();
-                        break;
-                    case SqlType.ORACLE:
-                        break;
-                    case SqlType.MYSQL:
-                        break;
-                    default:
-                        break;
-                }
-                if (dbConnection.State != ConnectionState.Open)
-                {
-                    dbConnection.Open();
-                }
-            });
+                case SqlType.MSSQL:
+                    dbConnection = new SqlConnection(connectionString);
+                    break;
+                case SqlType.ORACLE:
+                    break;
+                case SqlType.MYSQL:
+                    break;
+                default:
+                    break;
+            }
+            if (dbConnection.State != ConnectionState.Open)
+            {
+                dbConnection.Open();
+            }
         }
 
         /// <summary>
@@ -157,7 +167,7 @@ namespace Export.Data
                 {
                     tragetTableName = sourceTable.TableName;
                 }
-                using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy((SqlConnection)dbConnection, SqlBulkCopyOptions.KeepIdentity, (SqlTransaction)dbTransaction))
+                using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy((SqlConnection)dbConnection, SqlBulkCopyOptions.Default, (SqlTransaction)dbTransaction))
                 {
                     sqlBulkCopy.DestinationTableName = tragetTableName;
                     sqlBulkCopy.BatchSize = 100000;
@@ -275,19 +285,18 @@ namespace Export.Data
         {
             try
             {
-                BeginTrans();
+                Open();
                 T result = func();
-                CommitTrans();
                 return result;
             }
             catch (SqlException ex)
             {
-                RollBack();
+                Close();
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
             }
             catch (Exception ex)
             {
-                RollBack();
+                Close();
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
             }
             return default(T);
@@ -301,21 +310,22 @@ namespace Export.Data
         {
             try
             {
-                BeginTrans();
+                Open();
                 func();
-                CommitTrans();
             }
             catch (SqlException ex)
             {
-                RollBack();
+                Close();
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
             }
             catch (Exception ex)
             {
-                RollBack();
+                Close();
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
             }
         }
+
+        public int Order { get; set; } = 1;
     }
 
     /// <summary>

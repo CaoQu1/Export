@@ -79,6 +79,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UIDependencyManager.cs" />
     <EmbeddedResource Include="Export.resx">
       <DependentUpon>Export.cs</DependentUpon>
     </EmbeddedResource>
@@ -114,6 +115,11 @@
       <Project>{c3c1cc2e-1cc1-46dc-804d-f90d8be2f93d}</Project>
       <Name>Export.Data</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Export.Model\Export.Model.csproj">
+      <Project>{2CAF4F38-FF00-4908-AD5C-89161EEE6D64}</Project>
+      <Name>Export.Model</Name>
+    </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

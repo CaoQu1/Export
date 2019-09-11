@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
+using System.Reflection;
+using Export.Common;
+using System.Diagnostics;
 
 namespace Export
 {
@@ -15,11 +19,12 @@ namespace Export
         [STAThread]
         static void Main()
         {
+            Trace.Listeners.Add(new DefaultTraceListener());
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-            ContainerBuilder containerBuilder = new ContainerBuilder();
+            StartService.Instance.Start();
             Application.Run(new Export());
         }
 

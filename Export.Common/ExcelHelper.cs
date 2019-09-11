@@ -1,5 +1,6 @@
 ﻿using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -121,10 +122,12 @@ namespace Export.Common
                 Type tType = typeof(T);
                 string tableName = tType.Name;
                 TableAttribute tableAttribute = tType.GetCustomAttribute<TableAttribute>();
+                SheetAttribute sheetAttribute = tType.GetCustomAttribute<SheetAttribute>();
                 if (tableAttribute != null)
                 {
                     tableName = tableAttribute.Name;
                 }
+                dataTable.TableName = tableName;
                 int startIndex = 0;
                 RowAttribute rowAttribute = tType.GetCustomAttribute<RowAttribute>();
                 if (rowAttribute != null)
@@ -142,61 +145,147 @@ namespace Export.Common
                     }
                     return new DataColumn(columnName, x.PropertyType);
                 }).ToArray());
-                using (var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
+                IWorkbook workbook = null;
+                HSSFWorkbook hSSFWorkbook2007 = null;
+                XSSFWorkbook xSSFWorkbook2003 = null;
+                try
                 {
-                    IWorkbook workbook = new HSSFWorkbook(fileStream);
-                    ISheet sheet = workbook.GetSheet(tableName);
-                    for (int j = startIndex; j < sheet.LastRowNum; j++)
+                    hSSFWorkbook2007 = new HSSFWorkbook(fileStream);
+                    workbook = (IWorkbook)hSSFWorkbook2007;
+                }
+                catch (Exception ex)
+                {
+                    fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
+                    xSSFWorkbook2003 = new XSSFWorkbook(fileStream);
+                    workbook = (IWorkbook)xSSFWorkbook2003;
+                    System.Diagnostics.Trace.TraceError(ex.Message);
+                }
+                if (sheetAttribute != null)
+                {
+                    tableName = sheetAttribute.Name;
+                }
+                ISheet sheet = workbook.GetSheet(tableName);
+                for (int j = startIndex; j < sheet.LastRowNum; j++)
+                {
+                    IRow row = sheet.GetRow(j);
+                    if (row == null || IsRowEmpty(row))
                     {
-                        IRow row = sheet.GetRow(j);
-                        if (row == null)
+                        continue;
+                    }
+                    else
+                    {
+                        DataRow newRow = dataTable.NewRow();
+                        foreach (PropertyInfo property in properties)
                         {
-                            continue;
-                        }
-                        else
-                        {
-                            DataRow newRow = dataTable.NewRow();
-                            foreach (PropertyInfo property in properties)
+                            ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+                            TableColumnAttribute tableColumnAttribute = property.GetCustomAttribute<TableColumnAttribute>();
+                            if (tableColumnAttribute != null)
                             {
-                                ColumnAttribute columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-                                if (columnAttribute != null)
+                                object value = null;
+                                if (!string.IsNullOrEmpty(tableColumnAttribute.TableColumnProcess))
+                                {
+                                    ColumnProcess(tableColumnAttribute.TableColumnProcess, "", ref value);
+                                }
+                                else if (columnAttribute != null)
                                 {
                                     ICell cell = row.GetCell(columnAttribute.Index);
-                                    Type pType = property.PropertyType;
-                                    object value = null;
-                                    switch (pType.Name)
+                                    if (cell != null || cell.ToString() != "")
                                     {
-                                        case "System.String":
-                                            value = cell.StringCellValue;
-                                            break;
-                                        case "System.Decimal":
-                                        case "System.Double":
-                                        case "System.Int32":
-                                            value = cell.NumericCellValue;
-                                            break;
-                                        case "System.DateTime":
-                                            value = cell.DateCellValue;
-                                            break;
-                                        case "System.Boolean":
-                                            value = cell.BooleanCellValue;
-                                            break;
-                                        default:
-                                            value = cell.RichStringCellValue.String;
-                                            break;
+                                        Type pType = property.PropertyType;
+                                        if (!string.IsNullOrEmpty(columnAttribute.ColumnProcess))
+                                        {
+                                            ColumnProcess(columnAttribute.ColumnProcess, cell.StringCellValue, ref value);
+                                        }
+                                        else
+                                        {
+                                            switch (pType.FullName)
+                                            {
+                                                case "System.String":
+                                                    value = cell.StringCellValue;
+                                                    break;
+                                                case "System.Decimal":
+                                                case "System.Double":
+                                                case "System.Int32":
+                                                    value = cell.NumericCellValue;
+                                                    break;
+                                                case "System.DateTime":
+                                                    value = cell.DateCellValue;
+                                                    break;
+                                                case "System.Boolean":
+                                                    value = cell.BooleanCellValue;
+                                                    break;
+                                                default:
+                                                    value = cell.RichStringCellValue.String;
+                                                    break;
+                                            }
+                                        }
                                     }
-                                    newRow[property.Name] = value;
                                 }
+                                newRow[tableColumnAttribute.Name] = value;
                             }
-                            dataTable.Rows.Add(newRow);
                         }
+                        dataTable.Rows.Add(newRow);
                     }
-                    return dataTable;
                 }
+                return dataTable;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Trace.TraceError(ex.Message);
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// 判断一行是否为空
+        /// </summary>
+        /// <param name="row"></param>
+        /// <returns></returns>
+        public static Boolean IsRowEmpty(IRow row)
+        {
+            if (row is XSSFRow)
+            {
+                for (int c = row.FirstCellNum; c < row.LastCellNum; c++)
+                {
+                    XSSFCell cell = (XSSFCell)row.GetCell(c);
+                    if (cell != null && cell.CellType != CellType.Blank)
+                    {
+                        return false;
+                    }
+                }
+            }
+            else if (row is HSSFRow)
+            {
+                for (int c = row.FirstCellNum; c < row.LastCellNum; c++)
+                {
+                    HSSFCell cell = (HSSFCell)row.GetCell(c);
+                    if (cell != null && cell.CellType != CellType.Blank)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 列处理
+        /// </summary>
+        /// <param name="ColumnProcess"></param>
+        /// <returns></returns>
+        public static void ColumnProcess(string columnProcess, string value, ref object returnValue)
+        {
+            var processStr = columnProcess.Split(',');
+            if (processStr.Length > 1)
+            {
+                string processPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, processStr[0] + ".dll");
+                Type type = Assembly.LoadFile(processPath).GetTypes().FirstOrDefault(x => x.Name.Equals(processStr[1]));
+                var columnProcessInstance = (IColumnProcess)Activator.CreateInstance(type);
+                if (columnProcess != null)
+                {
+                    returnValue = columnProcessInstance.Process(value);
+                }
             }
         }
     }

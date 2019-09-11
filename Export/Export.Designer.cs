@@ -30,15 +30,16 @@
         {
             this.txtFileName = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.txtResult = new System.Windows.Forms.TextBox();
             this.btnExport = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txtFileName
             // 
-            this.txtFileName.Location = new System.Drawing.Point(83, 22);
+            this.txtFileName.Location = new System.Drawing.Point(80, 23);
+            this.txtFileName.Multiline = true;
             this.txtFileName.Name = "txtFileName";
-            this.txtFileName.Size = new System.Drawing.Size(278, 25);
+            this.txtFileName.Size = new System.Drawing.Size(282, 32);
             this.txtFileName.TabIndex = 0;
             // 
             // label1
@@ -50,19 +51,19 @@
             this.label1.TabIndex = 1;
             this.label1.Text = "文件：";
             // 
-            // textBox2
+            // txtResult
             // 
-            this.textBox2.Location = new System.Drawing.Point(83, 71);
-            this.textBox2.Multiline = true;
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(278, 135);
-            this.textBox2.TabIndex = 2;
+            this.txtResult.Location = new System.Drawing.Point(83, 71);
+            this.txtResult.Multiline = true;
+            this.txtResult.Name = "txtResult";
+            this.txtResult.Size = new System.Drawing.Size(278, 135);
+            this.txtResult.TabIndex = 2;
             // 
             // btnExport
             // 
             this.btnExport.Location = new System.Drawing.Point(368, 23);
             this.btnExport.Name = "btnExport";
-            this.btnExport.Size = new System.Drawing.Size(75, 23);
+            this.btnExport.Size = new System.Drawing.Size(91, 34);
             this.btnExport.TabIndex = 3;
             this.btnExport.Text = "导入";
             this.btnExport.UseVisualStyleBackColor = true;
@@ -72,11 +73,12 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(450, 239);
+            this.ClientSize = new System.Drawing.Size(485, 273);
             this.Controls.Add(this.btnExport);
-            this.Controls.Add(this.textBox2);
+            this.Controls.Add(this.txtResult);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.txtFileName);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Name = "Export";
             this.Text = "导入";
             this.ResumeLayout(false);
@@ -88,7 +90,7 @@
 
         private System.Windows.Forms.TextBox txtFileName;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox txtResult;
         private System.Windows.Forms.Button btnExport;
     }
 }

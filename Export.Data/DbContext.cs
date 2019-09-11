@@ -22,12 +22,12 @@ namespace Export.Data
         /// <summary>
         /// 缓存表
         /// </summary>
-        private static readonly Dictionary<Type, string> tables = new Dictionary<Type, string>();
+        private static readonly Dictionary<Type, TableAttribute> tables = new Dictionary<Type, TableAttribute>();
 
         /// <summary>
         /// 缓存表相关字段
         /// </summary>
-        private static readonly Dictionary<string, Dictionary<string, Type>> tableFileds = new Dictionary<string, Dictionary<string, Type>>();
+        private static readonly Dictionary<string, Dictionary<string, PropertyInfo>> tableFileds = new Dictionary<string, Dictionary<string, PropertyInfo>>();
 
         /// <summary>
         /// ctor
@@ -47,15 +47,16 @@ namespace Export.Data
         {
             StringBuilder stringBuilder = new StringBuilder();
             Type t = typeof(T);
+            string tableName = t.Name;
+            TableAttribute tableAttribute = null;
             if (!tables.ContainsKey(t))
             {
-                string tableName = t.Name;
-                TableAttribute tableAttribute = t.GetCustomAttribute<TableAttribute>();
+                tableAttribute = t.GetCustomAttribute<TableAttribute>();
                 if (tableAttribute != null)
                 {
                     tableName = tableAttribute.Name;
                 }
-                tables.Add(t, tableName);
+                tables.Add(t, tableAttribute);
                 string fieldName = string.Empty;
                 TableColumnAttribute tableColumnAttribute = null;
                 t.GetProperties(BindingFlags.Instance | BindingFlags.Public).ToList().ForEach(x =>
@@ -63,27 +64,39 @@ namespace Export.Data
                      tableColumnAttribute = x.GetCustomAttribute<TableColumnAttribute>();
                      if (!tableFileds.ContainsKey(tableName))
                      {
-                         tableFileds.Add(tableName, new Dictionary<string, Type>());
+                         tableFileds.Add(tableName, new Dictionary<string, PropertyInfo>());
                      }
                      fieldName = x.Name;
                      if (tableColumnAttribute != null)
                      {
                          fieldName = tableColumnAttribute.Name;
                      }
-                     tableFileds[tableName].Add(fieldName, x.PropertyType);
+                     tableFileds[tableName].Add(fieldName, x);
                  });
             }
-            stringBuilder.AppendFormat("if object_id('{0}') is null", tables[t]);
-            stringBuilder.AppendFormat("create table {0}(", tables[t]);
-            foreach (var item in tableFileds[tables[t]])
+            else
             {
-                stringBuilder.AppendFormat("{0} {1},", item.Key, GetDbType(item.Value));
+                tableAttribute = tables[t];
+            }
+
+            stringBuilder.AppendFormat("if object_id('{0}') is null begin ", tables[t].Name);
+            stringBuilder.AppendFormat("create table {0}(", tables[t].Name);
+            StringBuilder commitBuilder = new StringBuilder();
+            foreach (var item in tableFileds[tables[t].Name])
+            {
+                stringBuilder.AppendFormat("{0} {1} {2},", item.Key, GetDbType(item.Value.PropertyType), GetOther(item.Value, tableName, commitBuilder));
             }
             if (stringBuilder.ToString().IndexOf(',') > 0)
             {
                 stringBuilder.Remove(stringBuilder.Length - 1, 1);
             }
             stringBuilder.Append(")");
+            if (!string.IsNullOrEmpty(tableAttribute.Comments))
+            {
+                commitBuilder.AppendFormat("exec sp_addextendedproperty N'MS_Description', N'{0}', N'SCHEMA', N'dbo',N'table', N'{1}';", tableAttribute.Comments, tableAttribute.Name);
+            }
+            stringBuilder.Append(commitBuilder);
+            stringBuilder.Append(" end ");
             sqlExecute.ExecuteSql(stringBuilder.ToString());
             return this;
         }
@@ -96,7 +109,7 @@ namespace Export.Data
         private string GetDbType(Type type)
         {
             string dbType = "nvarchar(400)";
-            switch (type.Name)
+            switch (type.FullName)
             {
                 case "System.String":
                     dbType = "nvarchar(400)";
@@ -129,6 +142,58 @@ namespace Export.Data
         }
 
         /// <summary>
+        /// 获取数据库其他描述
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        private string GetOther(PropertyInfo property, string tableName, StringBuilder commits)
+        {
+            StringBuilder filedDesc = new StringBuilder();
+            TableColumnAttribute tableColumnAttribute = property.GetCustomAttribute<TableColumnAttribute>();
+
+            if (tableColumnAttribute != null)
+            {
+                switch (tableColumnAttribute.ColumnType)
+                {
+                    case TableColumnType.PrimaryKey:
+                        filedDesc.Append(" primary key ");
+                        break;
+                    case TableColumnType.ForeignKey:
+                        filedDesc.AppendFormat(" constraint fk_{0}_{1} references {2} ", property.Name, tableColumnAttribute.ForeignKeyDec.Substring(0, tableColumnAttribute.ForeignKeyDec.IndexOf("(")), tableColumnAttribute.ForeignKeyDec);
+                        break;
+                    case TableColumnType.None:
+                        break;
+                    default:
+                        break;
+                }
+
+                if (tableColumnAttribute.IsIdentity)
+                {
+                    filedDesc.Append(" identity(1,1) ");
+                }
+
+                if (!string.IsNullOrEmpty(tableColumnAttribute.DefaultValue))
+                {
+                    filedDesc.AppendFormat(" default({0}) ", tableColumnAttribute.DefaultValue);
+                }
+
+                if (property.PropertyType.IsGenericType && typeof(Nullable<>) == property.PropertyType)
+                {
+                    filedDesc.Append(" null ");
+                }
+                else
+                {
+                    filedDesc.Append(" not null ");
+                }
+                if (!string.IsNullOrEmpty(tableColumnAttribute.Comments))
+                {
+                    commits.AppendFormat(" EXECUTE sp_addextendedproperty 'MS_Description', '{0}', 'user', 'dbo', 'table', '{1}', 'column', '{2}';", tableColumnAttribute.Comments, tableName, tableColumnAttribute.Name);
+                }
+            }
+            return filedDesc.ToString();
+        }
+
+        /// <summary>
         /// 插入数据
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -143,13 +208,13 @@ namespace Export.Data
         /// 批量插入
         /// </summary>
         /// <returns></returns>
-        public IDbContext BatchInsert(DataTable dataTable, string targetTableName = "")
+        public IDbContext BatchInsert<T>(DataTable dataTable, string targetTableName = "")
         {
-            return InternalExecute<DbContext>(() =>
-             {
-                 sqlExecute.BatchInsert(dataTable, targetTableName);
-                 return this;
-             });
+            return InternalExecute<T, DbContext>(() =>
+              {
+                  sqlExecute.BatchInsert(dataTable, targetTableName);
+                  return this;
+              });
         }
 
         /// <summary>
@@ -166,26 +231,28 @@ namespace Export.Data
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="func"></param>
-        private T InternalExecute<T>(Func<T> func)
+        private R InternalExecute<T, R>(Func<R> func)
         {
             try
             {
                 Set<T>();
-                T result = func();
+                R result = func();
                 return result;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
             }
-            return default(T);
+            return default(R);
         }
+
+        public int Order { get; set; } = 2;
     }
 
     /// <summary>
     /// 数据库上下文接口
     /// </summary>
-    public interface IDbContext : IDisposable
+    public interface IDbContext
     {
         /// <summary>
         /// 初始化程序集
@@ -208,6 +275,6 @@ namespace Export.Data
         /// <param name="dataTable"></param>
         /// <param name="targetTableName"></param>
         /// <returns></returns>
-        IDbContext BatchInsert(DataTable dataTable, string targetTableName = "");
+        IDbContext BatchInsert<T>(DataTable dataTable, string targetTableName = "");
     }
 }
