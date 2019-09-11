@@ -246,7 +246,6 @@ namespace Export.Data
             return default(R);
         }
 
-        public int Order { get; set; } = 2;
     }
 
     /// <summary>

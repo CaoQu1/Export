@@ -39,7 +39,7 @@
             this.txtFileName.Location = new System.Drawing.Point(80, 23);
             this.txtFileName.Multiline = true;
             this.txtFileName.Name = "txtFileName";
-            this.txtFileName.Size = new System.Drawing.Size(282, 32);
+            this.txtFileName.Size = new System.Drawing.Size(405, 32);
             this.txtFileName.TabIndex = 0;
             // 
             // label1
@@ -56,12 +56,12 @@
             this.txtResult.Location = new System.Drawing.Point(83, 71);
             this.txtResult.Multiline = true;
             this.txtResult.Name = "txtResult";
-            this.txtResult.Size = new System.Drawing.Size(278, 135);
+            this.txtResult.Size = new System.Drawing.Size(523, 135);
             this.txtResult.TabIndex = 2;
             // 
             // btnExport
             // 
-            this.btnExport.Location = new System.Drawing.Point(368, 23);
+            this.btnExport.Location = new System.Drawing.Point(515, 23);
             this.btnExport.Name = "btnExport";
             this.btnExport.Size = new System.Drawing.Size(91, 34);
             this.btnExport.TabIndex = 3;
@@ -73,7 +73,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(485, 273);
+            this.ClientSize = new System.Drawing.Size(688, 260);
             this.Controls.Add(this.btnExport);
             this.Controls.Add(this.txtResult);
             this.Controls.Add(this.label1);
