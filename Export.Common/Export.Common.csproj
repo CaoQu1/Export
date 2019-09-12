@@ -64,6 +64,7 @@
     <Compile Include="CommonConst.cs" />
     <Compile Include="CustomAttribute.cs" />
     <Compile Include="DataRowEqualityComparer.cs" />
+    <Compile Include="IocManager.cs" />
     <Compile Include="StartService.cs" />
     <Compile Include="ExcelHelper.cs" />
     <Compile Include="IDependencyManager.cs" />

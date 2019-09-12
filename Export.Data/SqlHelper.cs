@@ -50,7 +50,7 @@ namespace Export.Data
         /// </summary>
         public SqlHelper()
         {
-
+            System.Diagnostics.Trace.TraceInformation("执行SqlHelper构造函数！");
         }
 
         /// <summary>
