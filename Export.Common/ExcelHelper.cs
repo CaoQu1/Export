@@ -15,7 +15,7 @@ namespace Export.Common
     /// <summary>
     /// excel帮助类
     /// </summary>
-    public class ExcelHelper
+    public static class ExcelHelper
     {
         /// <summary>
         /// Execl文件转模型
@@ -28,7 +28,7 @@ namespace Export.Common
             {
                 if (!File.Exists(path))
                 {
-                    throw new Exception($"{path}路径的文件不存在！");
+                    throw new ArgumentNullException($"{path}路径的文件不存在！");
                 }
 
                 List<T> list = new List<T>();
@@ -53,7 +53,7 @@ namespace Export.Common
                     for (int j = startIndex; j < sheet.LastRowNum; j++)
                     {
                         IRow row = sheet.GetRow(j);
-                        if (row == null)
+                        if (row == null || IsRowEmpty(row))
                         {
                             continue;
                         }
@@ -66,29 +66,7 @@ namespace Export.Common
                                 if (columnAttribute != null)
                                 {
                                     ICell cell = row.GetCell(columnAttribute.Index);
-                                    Type pType = property.PropertyType;
-                                    object value = null;
-                                    switch (pType.Name)
-                                    {
-                                        case "System.String":
-                                            value = cell.StringCellValue;
-                                            break;
-                                        case "System.Decimal":
-                                        case "System.Double":
-                                        case "System.Int32":
-                                            value = cell.NumericCellValue;
-                                            break;
-                                        case "System.DateTime":
-                                            value = cell.DateCellValue;
-                                            break;
-                                        case "System.Boolean":
-                                            value = cell.BooleanCellValue;
-                                            break;
-                                        default:
-                                            value = cell.RichStringCellValue.String;
-                                            break;
-                                    }
-                                    property.SetValue(tModel, value);
+                                    property.SetValue(tModel, GetCellValue(cell, property));
                                 }
                             }
                             list.Add(tModel);
@@ -105,19 +83,89 @@ namespace Export.Common
         }
 
         /// <summary>
+        /// 获取一行的值
+        /// </summary>
+        /// <param name="cell"></param>
+        /// <param name="row"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        private static object GetCellValue(ICell cell, PropertyInfo property)
+        {
+            Type pType = property.PropertyType;
+            object value = null;
+            switch (pType.FullName)
+            {
+                case "System.String":
+                    value = cell.StringCellValue;
+                    break;
+                case "System.Decimal":
+                case "System.Double":
+                case "System.Int32":
+                    value = cell.NumericCellValue;
+                    break;
+                case "System.DateTime":
+                    value = cell.DateCellValue;
+                    break;
+                case "System.Boolean":
+                    value = cell.BooleanCellValue;
+                    break;
+                default:
+                    value = cell.RichStringCellValue.String;
+                    break;
+            }
+            return value;
+        }
+
+        /// <summary>
+        /// 获取列值
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="property"></param>
+        /// <param name="tableColumnAttribute"></param>
+        /// <param name="columnAttribute"></param>
+        /// <returns></returns>
+        private static object GetCellValue(IRow row, PropertyInfo property, TableColumnAttribute tableColumnAttribute, ColumnAttribute columnAttribute)
+        {
+            object value = null;
+            if (!string.IsNullOrEmpty(tableColumnAttribute.TableColumnProcess))
+            {
+                ColumnProcess(tableColumnAttribute.TableColumnProcess, "", ref value);
+            }
+            else if (columnAttribute != null)
+            {
+                ICell cell = row.GetCell(columnAttribute.Index);
+                if (cell != null && cell.CellType != CellType.Blank)
+                {
+                    if (!string.IsNullOrEmpty(columnAttribute.ColumnProcess))
+                    {
+                        ColumnProcess(columnAttribute.ColumnProcess, cell.StringCellValue, ref value);
+                    }
+                    else
+                    {
+                        value = GetCellValue(cell, property);
+                    }
+                }
+            }
+            return value;
+        }
+
+        /// <summary>
         /// Execl文件转内存表
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
         public static DataTable ExcelToTable<T>(string path)
         {
+            if (string.IsNullOrEmpty(path))
+            {
+                throw new ArgumentNullException($"{path}路径为空！");
+            }
+            if (!File.Exists(path))
+            {
+                throw new ArgumentNullException($"{path}路径的文件不存在！");
+            }
             try
             {
-                if (!File.Exists(path))
-                {
-                    throw new Exception($"{path}路径的文件不存在！");
-                }
-
                 DataTable dataTable = new DataTable();
                 Type tType = typeof(T);
                 string tableName = tType.Name;
@@ -182,52 +230,14 @@ namespace Export.Common
                             TableColumnAttribute tableColumnAttribute = property.GetCustomAttribute<TableColumnAttribute>();
                             if (tableColumnAttribute != null)
                             {
-                                object value = null;
-                                if (!string.IsNullOrEmpty(tableColumnAttribute.TableColumnProcess))
-                                {
-                                    ColumnProcess(tableColumnAttribute.TableColumnProcess, "", ref value);
-                                }
-                                else if (columnAttribute != null)
-                                {
-                                    ICell cell = row.GetCell(columnAttribute.Index);
-                                    if (cell != null || cell.ToString() != "")
-                                    {
-                                        Type pType = property.PropertyType;
-                                        if (!string.IsNullOrEmpty(columnAttribute.ColumnProcess))
-                                        {
-                                            ColumnProcess(columnAttribute.ColumnProcess, cell.StringCellValue, ref value);
-                                        }
-                                        else
-                                        {
-                                            switch (pType.FullName)
-                                            {
-                                                case "System.String":
-                                                    value = cell.StringCellValue;
-                                                    break;
-                                                case "System.Decimal":
-                                                case "System.Double":
-                                                case "System.Int32":
-                                                    value = cell.NumericCellValue;
-                                                    break;
-                                                case "System.DateTime":
-                                                    value = cell.DateCellValue;
-                                                    break;
-                                                case "System.Boolean":
-                                                    value = cell.BooleanCellValue;
-                                                    break;
-                                                default:
-                                                    value = cell.RichStringCellValue.String;
-                                                    break;
-                                            }
-                                        }
-                                    }
-                                }
-                                newRow[tableColumnAttribute.Name] = value;
+                                newRow[tableColumnAttribute.Name] = GetCellValue(row, property, tableColumnAttribute, columnAttribute);
                             }
                         }
                         dataTable.Rows.Add(newRow);
                     }
                 }
+                workbook.Close();
+                fileStream.Close();
                 return dataTable;
             }
             catch (Exception ex)
@@ -282,10 +292,7 @@ namespace Export.Common
                 string processPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, processStr[0] + ".dll");
                 Type type = Assembly.LoadFile(processPath).GetTypes().FirstOrDefault(x => x.Name.Equals(processStr[1]));
                 var columnProcessInstance = (IColumnProcess)Activator.CreateInstance(type);
-                if (columnProcess != null)
-                {
-                    returnValue = columnProcessInstance.Process(value);
-                }
+                returnValue = columnProcessInstance.Process(value);
             }
         }
     }

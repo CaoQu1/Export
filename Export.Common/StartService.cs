@@ -25,9 +25,13 @@ namespace Export.Common
         /// </summary>
         private StartService()
         {
-            ContainerBuilder containerBuilder = new ContainerBuilder();
+            //ContainerBuilder containerBuilder = new ContainerBuilder();
+            //var typeFinder = new AppDomainTypeFinder();
+            //containerBuilder.RegisterInstance(typeFinder).As<ITypeFinder>().SingleInstance();
+            //Container = containerBuilder.Build();
+            ObjectDI objectDI = new ObjectDI();
             var typeFinder = new AppDomainTypeFinder();
-            containerBuilder.RegisterInstance(typeFinder).As<ITypeFinder>().SingleInstance();
+            objectDI.Register<ITypeFinder>(typeFinder);
             var drTypes = typeFinder.FindClassesOfType<IDependencyManager>();
             var drInstances = new List<IDependencyManager>();
             foreach (var item in drTypes)
@@ -37,20 +41,25 @@ namespace Export.Common
             drInstances = drInstances.AsQueryable().OrderBy(x => x.Order).ToList();
             foreach (var item in drInstances)
             {
-                item.Register(containerBuilder, typeFinder);
+                item.Register(objectDI, typeFinder);
             }
-            Container = containerBuilder.Build();
+            Container = objectDI;
         }
 
         /// <summary>
         /// 惰性单例
         /// </summary>
-        public static StartService Instance = new Lazy<StartService>(() => new StartService()).Value;
+        public static StartService Instance => new Lazy<StartService>(() => new StartService()).Value;
 
         /// <summary>
         /// 容器对象
         /// </summary>
-        public IContainer Container { get; private set; }
+        //public IContainer Container { get; private set; }
+
+        /// <summary>
+        /// 容器对象
+        /// </summary>
+        public ObjectDI Container { get; private set; }
 
         /// <summary>
         /// 开启服务

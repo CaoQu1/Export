@@ -1,0 +1,3 @@
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Team Tools\Dynamic Code Coverage Tools\amd64\CodeCoverage.exe" collect /output:VisualStudio.coverage /verbose "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe" /Logger:trx "Export.Test\bin\Debug\Export.Test.dll"
+
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Team Tools\Dynamic Code Coverage Tools\amd64\CodeCoverage.exe" analyze /output:"vstest.coveragexml" "VisualStudio.coverage" 

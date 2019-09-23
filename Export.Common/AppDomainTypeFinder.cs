@@ -63,6 +63,12 @@ namespace Export.Common
             set { assemblySkipLoadingPattern = value; }
         }
 
+        public bool IgnoreReflectionErrors
+        {
+            get { return ignoreReflectionErrors; }
+            set { ignoreReflectionErrors = value; }
+        }
+
         /// <summary>Gets or sets the pattern for dll that will be investigated. For ease of use this defaults to match all but to increase performance you might want to configure a pattern that includes assemblies and your own.</summary>
         /// <remarks>If you change this so that BangBang assemblies arn't investigated (e.g. by not including something like "^BangBang|..." you may break core functionality.</remarks>
         public string AssemblyRestrictToLoadingPattern
@@ -90,6 +96,13 @@ namespace Export.Common
             return FindClassesOfType(typeof(T), assemblies, onlyConcreteClasses);
         }
 
+        /// <summary>
+        /// 查找类型
+        /// </summary>
+        /// <param name="assignTypeFrom"></param>
+        /// <param name="assemblies"></param>
+        /// <param name="onlyConcreteClasses"></param>
+        /// <returns></returns>
         public IEnumerable<Type> FindClassesOfType(Type assignTypeFrom, IEnumerable<Assembly> assemblies, bool onlyConcreteClasses = true)
         {
             var result = new List<Type>();
@@ -114,24 +127,7 @@ namespace Export.Common
                     {
                         foreach (var t in types)
                         {
-                            //t是否是assignTypeFrom的子类 || （处理assignTypeFrom是泛型定义的情况，如：IMyIterface<T>）
-                            if (assignTypeFrom.IsAssignableFrom(t) || (assignTypeFrom.IsGenericTypeDefinition && DoesTypeImplementOpenGeneric(t, assignTypeFrom)))
-                            {
-                                if (!t.IsInterface)
-                                {
-                                    if (onlyConcreteClasses)
-                                    {
-                                        if (t.IsClass && !t.IsAbstract)
-                                        {
-                                            result.Add(t);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        result.Add(t);
-                                    }
-                                }
-                            }
+                            FindClassesAddType(assignTypeFrom, t, result, onlyConcreteClasses);
                         }
                     }
                 }
@@ -142,7 +138,7 @@ namespace Export.Common
                 foreach (var e in ex.LoaderExceptions)
                     msg += e.Message + Environment.NewLine;
 
-                var fail = new Exception(msg, ex);
+                var fail = new ArgumentNullException(msg, ex);
                 Debug.WriteLine(fail.Message, fail);
 
                 throw fail;
@@ -150,8 +146,39 @@ namespace Export.Common
             return result;
         }
 
-        /// <summary>Gets the assemblies related to the current implementation.</summary>
-        /// <returns>A list of assemblies that should be loaded by the BangBang factory.</returns>
+        /// <summary>
+        /// 查找并添加
+        /// </summary>
+        /// <param name="assignTypeFrom"></param>
+        /// <param name="t"></param>
+        /// <param name="result"></param>
+        /// <param name="onlyConcreteClasses"></param>
+        private void FindClassesAddType(Type assignTypeFrom, Type t, List<Type> result, bool onlyConcreteClasses = true)
+        {
+            //t是否是assignTypeFrom的子类 || （处理assignTypeFrom是泛型定义的情况，如：IMyIterface<T>）
+            if (assignTypeFrom.IsAssignableFrom(t) || (assignTypeFrom.IsGenericTypeDefinition && DoesTypeImplementOpenGeneric(t, assignTypeFrom)))
+            {
+                if (!t.IsInterface)
+                {
+                    if (onlyConcreteClasses)
+                    {
+                        if (t.IsClass && !t.IsAbstract)
+                        {
+                            result.Add(t);
+                        }
+                    }
+                    else
+                    {
+                        result.Add(t);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 查找所有程序集
+        /// </summary>
+        /// <returns></returns>
         public virtual IList<Assembly> GetAssemblies()
         {
             var addedAssemblyNames = new List<string>();

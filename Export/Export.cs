@@ -54,7 +54,7 @@ namespace Export
                     string selectWhere = $"level ='P3' and time>'{correctionDate}'";
                     dt = dt.Select(selectWhere).Distinct(new DataRowEqualityComparer()).CopyToDataTable();
                     dt.TableName = tableName;
-                    dbContext = StartService.Instance.Container.Resolve<IDbContext>();
+                    dbContext = StartService.Instance.Container.GetService<IDbContext>();
                     if (dbContext != null)
                     {
                         dbContext.BatchInsert<ExportEntity>(dt);

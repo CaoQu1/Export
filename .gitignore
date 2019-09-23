@@ -1,10 +1,4 @@
-# Object file
-*.o
-
-# Ada Library Information
-*.ali
-
-/obj/*
-obj
-obj
-obj
+ obj
+bin 
+ 
+ 

@@ -143,10 +143,13 @@ namespace Export.Common
                 }
                 service = registry.Factory(this, genericArguments);
                 services[registry] = service;
-                var disposable = service as IDisposable;
-                if (null != disposable)
+                if (service != null)
                 {
-                    disposables.Add(disposable);
+                    var disposable = service as IDisposable;
+                    if (null != disposable)
+                    {
+                        disposables.Add(disposable);
+                    }
                 }
                 return service;
             }

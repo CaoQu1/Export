@@ -32,5 +32,17 @@ namespace Export
             containerBuilder.RegisterType<DbContext>().As<IDbContext>().InstancePerDependency();
             containerBuilder.RegisterType<Export>().As<Form>().InstancePerDependency();
         }
+
+        /// <summary>
+        /// 注入接口
+        /// </summary>
+        /// <param name="objectDI"></param>
+        /// <param name="typeFinder"></param>
+        public void Register(ObjectDI objectDI, ITypeFinder typeFinder)
+        {
+            objectDI.Register<ISqlExecute, SqlHelper>(LifecCycle.Transient);
+            objectDI.Register<IDbContext, DbContext>(LifecCycle.Transient);
+            objectDI.Register<Form, Export>(LifecCycle.Transient);
+        }
     }
 }

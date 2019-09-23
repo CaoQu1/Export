@@ -163,6 +163,10 @@ namespace Export.Data
         {
             InternalExecute(() =>
             {
+                if (sourceTable == null)
+                {
+                    throw new ArgumentNullException(nameof(sourceTable));
+                }
                 if (string.IsNullOrEmpty(tragetTableName))
                 {
                     tragetTableName = sourceTable.TableName;
@@ -189,7 +193,7 @@ namespace Export.Data
         {
             if (dbConnection == null)
             {
-                throw new Exception("请先初始化数据库连接！");
+                throw new ArgumentNullException("请先初始化数据库连接！");
             }
             if (dbTransaction == null)
             {
@@ -253,7 +257,7 @@ namespace Export.Data
         {
             if (dbConnection == null)
             {
-                throw new Exception("请先初始化数据库连接！");
+                throw new ArgumentNullException("请先初始化数据库连接！");
             }
             if (dbCommand == null)
             {
@@ -298,6 +302,7 @@ namespace Export.Data
             {
                 Close();
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
+                throw new ArgumentNullException(ex.Message, ex);
             }
             return default(T);
         }
@@ -322,6 +327,7 @@ namespace Export.Data
             {
                 Close();
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
+                throw new ArgumentNullException(ex.Message, ex);
             }
         }
 

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -86,12 +87,12 @@ namespace Export.Data
             {
                 stringBuilder.AppendFormat("{0} {1} {2},", item.Key, GetDbType(item.Value.PropertyType), GetOther(item.Value, tableName, commitBuilder));
             }
-            if (stringBuilder.ToString().IndexOf(',') > 0)
+            if (stringBuilder.ToString().IndexOf(',') >= 0)
             {
                 stringBuilder.Remove(stringBuilder.Length - 1, 1);
             }
             stringBuilder.Append(")");
-            if (!string.IsNullOrEmpty(tableAttribute.Comments))
+            if (tableAttribute != null && !string.IsNullOrEmpty(tableAttribute.Comments))
             {
                 commitBuilder.AppendFormat("exec sp_addextendedproperty N'MS_Description', N'{0}', N'SCHEMA', N'dbo',N'table', N'{1}';", tableAttribute.Comments, tableAttribute.Name);
             }
@@ -159,7 +160,7 @@ namespace Export.Data
                         filedDesc.Append(" primary key ");
                         break;
                     case TableColumnType.ForeignKey:
-                        filedDesc.AppendFormat(" constraint fk_{0}_{1} references {2} ", property.Name, tableColumnAttribute.ForeignKeyDec.Substring(0, tableColumnAttribute.ForeignKeyDec.IndexOf("(")), tableColumnAttribute.ForeignKeyDec);
+                        filedDesc.AppendFormat(" constraint fk_{0}_{1} references {2} ", property.Name, tableColumnAttribute.ForeignKeyDec.Substring(0, tableColumnAttribute.ForeignKeyDec.IndexOf("(")).ToString(CultureInfo.InvariantCulture), tableColumnAttribute.ForeignKeyDec);
                         break;
                     case TableColumnType.None:
                         break;
@@ -242,6 +243,7 @@ namespace Export.Data
             catch (Exception ex)
             {
                 System.Diagnostics.Trace.TraceError($"{System.Reflection.MethodBase.GetCurrentMethod().Name}:{ex.Message}");
+                throw new ArgumentNullException(ex.Message, ex);
             }
             return default(R);
         }
@@ -251,7 +253,7 @@ namespace Export.Data
     /// <summary>
     /// 数据库上下文接口
     /// </summary>
-    public interface IDbContext
+    public interface IDbContext : IDisposable
     {
         /// <summary>
         /// 初始化程序集

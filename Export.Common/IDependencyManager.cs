@@ -19,6 +19,13 @@ namespace Export.Common
         void Register(ContainerBuilder containerBuilder, ITypeFinder typeFinder);
 
         /// <summary>
+        /// 注入
+        /// </summary>
+        /// <param name="objectDI"></param>
+        /// <param name="typeFinder"></param>
+        void Register(ObjectDI objectDI, ITypeFinder typeFinder);
+
+        /// <summary>
         /// 顺序
         /// </summary>
         int Order { get; set; }
